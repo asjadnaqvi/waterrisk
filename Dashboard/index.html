@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f3f6f3" />
+    <title>European water stress explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div>
+            <p class="eyebrow">ASCII Sustainability · ASCII/WIFO</p>
+            <div class="title-line">
+              <h1>European Inter-Regional Water Stress Explorer</h1>
+              <a class="citation-link" href="https://www.researchsquare.com/article/rs-10230410/v1" target="_blank" rel="noopener noreferrer" aria-label="Open citation: Meyer, Naqvi, and Neier (2026), Virtual-water bottlenecks expose Europe's supply chains to risks, Research Square preprint." title="Meyer, Naqvi, and Neier (2026). Virtual-water bottlenecks expose Europe's supply chains to risks. Research Square preprint.">
+                <span class="citation-glyph" aria-hidden="true">i</span>
+                <span class="citation-tooltip" role="tooltip">Meyer, Naqvi, and Neier (2026). <em>Virtual-water bottlenecks expose Europe's supply chains to risks.</em> Research Square preprint.</span>
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="topbar-meta">
+          <span class="data-badge"><i></i> BLUE-WATER CONSUMPTION</span>
+          <span id="load-status" class="load-status" role="status">Loading analysis data…</span>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="control-rail" aria-label="Map controls and selected region details">
+          <section class="control-section region-section">
+            <div class="section-heading">
+              <span class="step-number">01</span>
+              <div>
+                <h2>Choose a NUTS-2 region</h2>
+                <p>Hover the map or choose a region</p>
+              </div>
+            </div>
+            <label class="field-label" for="region-select">Region</label>
+            <select id="region-select" disabled>
+              <option value="">Loading regions…</option>
+            </select>
+            <div class="region-caption" id="region-caption">No region selected</div>
+          </section>
+
+          <section class="control-section">
+            <div class="section-heading">
+              <span class="step-number">02</span>
+              <div>
+                <h2>Flow direction</h2>
+                <p>Arrows follow source to final demand</p>
+              </div>
+            </div>
+            <div class="segmented" role="group" aria-label="Flow direction">
+              <button class="direction-button is-active" type="button" data-direction="imports" aria-pressed="true">
+                <span aria-hidden="true">↓</span> Imports
+              </button>
+              <button class="direction-button" type="button" data-direction="exports" aria-pressed="false">
+                <span aria-hidden="true">↑</span> Exports
+              </button>
+            </div>
+          </section>
+
+          <section class="control-section filter-section">
+            <div class="section-heading">
+              <span class="step-number">03</span>
+              <div>
+                <h2>Footprint filters</h2>
+                <p>Applied to both totals and flows</p>
+              </div>
+            </div>
+            <label class="field-label" for="component-select">Water-use pathway</label>
+            <select id="component-select" disabled>
+              <option value="all">Direct + indirect</option>
+            </select>
+            <label class="field-label" for="sector-select">Water-use sector</label>
+            <select id="sector-select" disabled>
+              <option value="all">All sectors</option>
+            </select>
+            <div class="range-heading">
+              <label class="field-label" for="threshold-select">Minimum flow per partner</label>
+              <output id="threshold-value" for="threshold-select">1.0 Mm³</output>
+            </div>
+            <input id="threshold-select" type="range" min="0" max="50" step="0.1" value="1" disabled />
+          </section>
+
+          <section class="summary-section" aria-live="polite">
+            <div class="section-heading summary-heading">
+              <span class="step-number">04</span>
+              <div>
+                <h2 id="summary-title">Regional dependency</h2>
+                <p id="summary-subtitle">Select a region to inspect its flows</p>
+              </div>
+            </div>
+            <div class="metric-grid">
+              <article class="metric metric-import">
+                <span class="metric-label"><span aria-hidden="true">↓</span> Imports</span>
+                <strong id="import-total">—</strong>
+                <small>Mm³ embodied in imports</small>
+              </article>
+              <article class="metric metric-export">
+                <span class="metric-label"><span aria-hidden="true">↑</span> Exports</span>
+                <strong id="export-total">—</strong>
+                <small>Mm³ embodied in exports</small>
+              </article>
+            </div>
+            <p id="outside-map-note" class="outside-map-note" hidden></p>
+            <label class="include-non-eu-option" for="include-non-eu">
+              <input id="include-non-eu" type="checkbox" />
+              <span>Include non-EU regions</span>
+            </label>
+            <div class="partner-heading">
+              <h3 id="partner-title">Import origins</h3>
+              <span id="partner-count">—</span>
+            </div>
+            <ol id="partner-list" class="partner-list">
+              <li class="empty-state">Choose or hover over a region to see its flow partners.</li>
+            </ol>
+          </section>
+
+          <footer class="rail-footer">
+            <span class="unit-stamp">FLOW UNIT <b>Mm³</b></span>
+            <span>Self-supply excluded from arrows</span>
+          </footer>
+        </aside>
+
+        <section class="map-panel" aria-label="NUTS-2 water flow map">
+          <div class="map-toolbar">
+            <div>
+              <span class="map-kicker">EU27 + Norway + United Kingdom</span>
+              <h2 id="map-heading">Imports into selected region</h2>
+            </div>
+            <div class="shade-control">
+              <label for="shade-mode">Shade regions by</label>
+              <select id="shade-mode" aria-label="Shade regions by">
+                <option value="water-stress" selected>Water stress index</option>
+                <option value="imports">Total imports</option>
+                <option value="exports">Total exports</option>
+              </select>
+            </div>
+            <div class="map-legend" aria-label="Map legend">
+              <span class="legend-item"><i class="legend-swatch import-swatch"></i> Import flow</span>
+              <span class="legend-item"><i class="legend-swatch export-swatch"></i> Export flow</span>
+              <span class="legend-item shade-legend">
+                <span id="shade-legend-label">Water stress index · WRI baseline</span>
+                <span class="shade-ramp-wrap">
+                  <i id="shade-legend-swatch" class="legend-stress"></i>
+                  <span id="shade-legend-ticks" class="shade-legend-ticks"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></span>
+                </span>
+              </span>
+              <span class="legend-item" id="shade-no-data" hidden><i class="legend-no-data"></i> No WRI data</span>
+              <span class="legend-item"><i class="legend-boundary"></i> Country border</span>
+              <span class="legend-item"><i class="legend-region"></i> NUTS-2 regions</span>
+            </div>
+          </div>
+          <div id="map" role="img" aria-label="Interactive map of EU27+2 NUTS-2 regions. Hover or select a region to show its water flows."></div>
+          <div class="map-footnote">
+            <span id="map-message">Preparing regional geometries…</span>
+            <span>Blue-water consumption · final-demand footprint · 2017</span>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/proj4@2.11.0/dist/proj4.js"></script>
+    <script src="https://unpkg.com/proj4leaflet@1.0.2/src/proj4leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

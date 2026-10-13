@@ -2,6 +2,7 @@
 !/Dashboard/
 !/Python/
 !.gitignore
+!README.md
 
 /Dashboard/*
 !/Dashboard/README.md
